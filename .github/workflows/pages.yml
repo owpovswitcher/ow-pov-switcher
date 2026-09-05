@@ -28,8 +28,9 @@ jobs:
       - name: Assemble public site
         shell: bash
         run: |
-          mkdir -p dist/data/matches
+          mkdir -p dist/data/matches dist/tools
           cp index.html catalog.html usage.html app.js catalog.js catalog-data.js map-data.js patch-data.js styles.css dist/
+          cp tools/catalog-builder.html tools/catalog-builder.js tools/catalog-builder.css dist/tools/
           cp data/matches/*.json dist/data/matches/
           python3 tools/build-catalog-index.py --input data/matches --output dist/data/matches/index.json
           touch dist/.nojekyll
