@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0e11" />
+  <title>試合プレイヤー | OW POV Switcher</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="./index.html" aria-label="OW POV Switcher プレイヤー">
+          <span class="brand-mark" aria-hidden="true">◒</span>
+          <span>
+            <span class="brand-kicker">OW REPLAY LAB</span>
+            <span class="brand-name">OW POV SWITCHER</span>
+          </span>
+        </a>
+        <div class="topbar-tools">
+          <nav class="primary-nav" aria-label="メインナビゲーション">
+            <a class="is-active" href="./index.html" aria-current="page">プレイヤー</a>
+            <a href="./catalog.html">カタログ</a>
+            <a href="./usage.html">ご利用にあたって</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="intro-grid">
+          <div class="hero-copy">
+            <h1 id="matchPageTitle" class="match-page-title">Ranked test match / Midtown</h1>
+            <p class="hero-text">
+              試合の視点を選択して動画を再生します。
+            </p>
+          </div>
+        </section>
+
+        <section class="lab-grid" aria-label="リプレイビューア">
+          <aside class="control-panel panel">
+            <div class="panel-heading compact">
+              <div>
+                <h2>視点を選ぶ</h2>
+              </div>
+            </div>
+
+            <div class="pov-list-heading">
+              <span class="field-label">視点一覧</span>
+            </div>
+            <div id="povList" class="pov-list"></div>
+
+            <div class="data-actions" aria-label="個人メモのバックアップ">
+              <button id="exportConfig" class="button button-outline" type="button">メモをバックアップ</button>
+              <button id="importConfig" class="button button-outline" type="button">メモを復元</button>
+              <input id="importFile" type="file" accept="application/json,.json" hidden />
+            </div>
+            <p id="dataStatus" class="data-status" aria-live="polite"></p>
+          </aside>
+
+          <section class="viewer-panel panel" aria-label="視点プレイヤー">
+            <div class="viewer-header">
+              <div>
+                <h2 id="viewerTitle">Overview / MAP</h2>
+              </div>
+            </div>
+
+            <div id="stage" class="stage" aria-live="polite">
+              <div id="playerMount" class="player-mount"></div>
+              <div id="stageEmpty" class="stage-empty">
+                <span class="empty-glyph" aria-hidden="true">＋</span>
+                <strong>動画を読み込んでいます</strong>
+                <span>動画が表示されるまでお待ちください</span>
+              </div>
+            </div>
+
+            <div class="transport-bar">
+              <div class="transport-buttons">
+                <button id="backFive" class="icon-button" type="button" title="5秒戻る">−5</button>
+                <button id="playPause" class="play-button" type="button" aria-label="再生">▶</button>
+                <button id="forwardFive" class="icon-button" type="button" title="5秒進む">+5</button>
+              </div>
+              <div class="time-track">
+                <div class="time-readout">
+                  <span id="currentTime">00:00</span>
+                  <span>/ <span id="durationLabel">--:--</span></span>
+                </div>
+                <input id="timeline" type="range" min="0" max="0" step="0.1" value="0" aria-label="動画の再生位置" />
+              </div>
+              <div class="volume-control">
+                <label class="volume-label" for="volume">VOL</label>
+                <input id="volume" type="range" min="0" max="100" step="1" value="100" aria-label="音量" />
+                <output id="volumeValue" for="volume">100%</output>
+              </div>
+              <button id="reloadActive" class="button button-outline" type="button">現在位置から再読み込み</button>
+            </div>
+
+            <div class="viewer-footer">
+              <div class="current-perspective">
+                <span class="current-label">現在の視点</span>
+                <strong id="activeName">Overview</strong>
+                <span id="activeMeta">MAP · WORLD</span>
+              </div>
+              <div class="keyboard-hint">
+                <span class="key">1</span>–<span class="key">9</span> / <span class="key">0</span>
+                <span>視点切替</span>
+              </div>
+            </div>
+
+            <section class="notes-area" aria-label="メモ">
+              <div class="notes-header">
+                <div class="notes-title">
+                  <strong>時間メモ</strong>
+                </div>
+                <button id="addNote" class="button button-outline" type="button" disabled>この時間にメモ</button>
+              </div>
+
+              <form id="noteComposer" class="note-composer" hidden>
+                <div class="note-composer-time">
+                  <span class="note-time-label">記録時刻</span>
+                  <strong id="noteTime">00:00</strong>
+                </div>
+                <textarea id="noteText" rows="3" maxlength="500" placeholder="例：ここでXXが右方向へ移動している"></textarea>
+                <div class="note-composer-actions">
+                  <button id="cancelNote" class="button button-quiet" type="button">キャンセル</button>
+                  <button class="button button-primary" type="submit">メモを保存</button>
+                </div>
+              </form>
+
+              <div id="noteList" class="note-list" aria-live="polite"></div>
+            </section>
+          </section>
+        </section>
+
+      </main>
+
+      <footer class="footer">
+        <span>OW POV SWITCHER</span>
+        <nav class="footer-links" aria-label="サイト情報">
+          <a href="./index.html" aria-current="page">プレイヤー</a>
+          <a href="./catalog.html">カタログ</a>
+          <a href="./usage.html">ご利用にあたって</a>
+          <a href="https://x.com/OWPOVSwitcher" target="_blank" rel="noreferrer noopener">X @OWPOVSwitcher</a>
+        </nav>
+      </footer>
+    </div>
+
+    <script src="./map-data.js" defer></script>
+    <script src="./patch-data.js" defer></script>
+    <script src="./catalog-data.js" defer></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

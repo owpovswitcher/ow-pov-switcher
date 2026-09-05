@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0e11" />
+  <title>試合JSON生成 | OW POV Switcher</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./catalog-builder.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="../index.html" aria-label="OW POV Switcher プレイヤー">
+          <span class="brand-mark" aria-hidden="true">◒</span>
+          <span>
+            <span class="brand-kicker">OW REPLAY LAB</span>
+            <span class="brand-name">OW POV SWITCHER</span>
+          </span>
+        </a>
+        <div class="topbar-tools">
+          <nav class="primary-nav" aria-label="メインナビゲーション">
+            <a href="../index.html">プレイヤー</a>
+            <a href="../catalog.html">カタログ</a>
+            <a href="../usage.html">ご利用にあたって</a>
+            <a class="is-active" href="./catalog-builder.html">JSON生成</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="page-hero builder-hero">
+          <div>
+            <h1>試合JSON生成</h1>
+            <p class="hero-text">
+              index.jsonを読み込み、新しい試合JSONと更新後のindex.jsonをダウンロードします。
+            </p>
+          </div>
+        </section>
+
+        <section class="builder-layout" aria-label="試合JSON生成">
+          <aside class="builder-sidebar panel">
+            <div class="panel-heading compact">
+              <div>
+                <h2 id="catalogCount">index.json未読込</h2>
+              </div>
+            </div>
+
+            <div class="builder-file-actions">
+              <button id="importIndex" class="button button-outline" type="button">index.jsonをアップロード</button>
+              <input id="indexFile" type="file" accept="application/json,.json" hidden />
+            </div>
+            <p id="indexStatus" class="builder-index-status" aria-live="polite">index.json未読込み — 最初にファイルを選択してください。</p>
+            <p id="builderStatus" class="data-status" aria-live="polite"></p>
+
+            <div class="builder-list-heading">
+              <span class="field-label">今回追加した試合</span>
+            </div>
+            <div id="createdMatchList" class="builder-match-list" aria-live="polite"></div>
+
+            <button id="newMatch" class="button button-primary builder-new-match" type="button">
+              <span>新しい試合を追加</span>
+              <span aria-hidden="true">＋</span>
+            </button>
+
+            <p class="builder-sidebar-note">
+              先にindex.jsonを読み込んでください。試合JSONと更新後のindex.jsonは別々にダウンロードします。
+            </p>
+          </aside>
+
+          <section class="builder-editor panel" aria-label="新しい試合の入力">
+            <form id="matchForm">
+              <div class="builder-editor-heading">
+                <div>
+                  <h2 id="editorTitle">新しい試合</h2>
+                  <p id="editorSubline" class="builder-editor-subline">index.jsonへ追加する試合情報を入力します。</p>
+                </div>
+                <span id="editorState" class="builder-record-tag" aria-hidden="true" hidden>NEW</span>
+              </div>
+
+              <div class="builder-field-grid">
+                <label class="builder-field builder-field-wide">
+                  <span class="field-label">試合タイトル</span>
+                  <input id="matchTitle" class="text-input" type="text" maxlength="200" placeholder="例：Ranked match / Midtown" required />
+                </label>
+
+                <label class="builder-field">
+                  <span class="field-label">マップ</span>
+                  <select id="matchMap" class="builder-select" aria-describedby="matchMapHelp"></select>
+                  <small id="matchMapHelp" class="builder-field-help">カタログカードの背景画像にも使われます。画像が未登録のマップは文字表示のみです。</small>
+                </label>
+
+                <label class="builder-field">
+                  <span class="field-label">パッチバージョン</span>
+                  <input id="patchVersion" class="text-input builder-mono-input" type="date" aria-describedby="patchVersionHelp" />
+                  <small id="patchVersionHelp" class="builder-field-help">公式パッチノートの日付（YYYY-MM-DD）。未入力の場合はカタログで「パッチ未確認」と表示します。</small>
+                </label>
+
+                <label class="builder-field">
+                  <span class="field-label">MATCH ID</span>
+                  <span class="builder-input-action">
+                    <input id="matchId" class="text-input builder-mono-input" type="text" readonly aria-describedby="matchIdHelp" />
+                    <button id="regenerateId" class="button button-outline" type="button">再生成</button>
+                  </span>
+                  <small id="matchIdHelp" class="builder-field-help">サービス側で識別するUUID</small>
+                </label>
+
+                <label class="builder-field">
+                  <span class="field-label">リプレイコード（任意）</span>
+                  <input id="sourceReplayCode" class="text-input builder-mono-input" type="text" maxlength="6" placeholder="ABC123" autocomplete="off" />
+                  <small class="builder-field-help">検索用。IDの代わりには使いません。</small>
+                </label>
+              </div>
+
+              <div class="builder-perspective-heading">
+                <div>
+                  <h3>11視点の動画</h3>
+                </div>
+                <strong id="videoCoverage">動画 0 / 11</strong>
+              </div>
+              <p class="builder-section-help">
+                YouTubeのURLまたは11文字の動画IDを入力できます。未登録の視点があっても保存できます。
+              </p>
+
+              <div id="perspectiveEditor" class="builder-perspective-editor"></div>
+              <p id="formMessage" class="builder-form-message" aria-live="polite"></p>
+
+              <div class="builder-actions">
+                <button class="button button-primary" type="submit">
+                  <span>試合JSONをダウンロード</span>
+                  <span aria-hidden="true">↓</span>
+                </button>
+              </div>
+              <p class="builder-section-help builder-export-help">
+                保存すると、この試合の <code>{matchId}.json</code> だけをダウンロードします。複数の試合を追加したあと、下の「更新したindex.jsonをダウンロード」でindex.jsonを別に保存してください。
+              </p>
+            </form>
+          </section>
+        </section>
+
+        <section class="builder-output panel" aria-label="生成JSONの確認">
+          <div class="builder-output-heading">
+            <div>
+              <h2>今回の試合JSON</h2>
+            </div>
+          </div>
+          <pre id="matchJsonPreview" class="builder-json-preview">試合JSONを保存すると、ここに今回のファイル内容を表示します。</pre>
+
+          <div class="builder-output-heading builder-output-heading-secondary">
+            <div>
+              <h2>更新後のindex.json</h2>
+            </div>
+            <button id="downloadIndex" class="button button-outline" type="button" disabled>更新したindex.jsonをダウンロード</button>
+          </div>
+          <pre id="indexJsonPreview" class="builder-json-preview">index.jsonを読み込むと、ここに更新後のindex.jsonを表示します。</pre>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>OW POV SWITCHER</span>
+        <nav class="footer-links" aria-label="サイト情報">
+          <a href="../index.html">プレイヤー</a>
+          <a href="../catalog.html">カタログ</a>
+          <a href="../usage.html">ご利用にあたって</a>
+          <a href="./catalog-builder.html" aria-current="page">JSON生成</a>
+        </nav>
+      </footer>
+    </div>
+
+    <script src="../map-data.js" defer></script>
+    <script src="../patch-data.js" defer></script>
+    <script src="../catalog-data.js" defer></script>
+    <script src="./catalog-builder.js?v=20260904-3" defer></script>
+  </body>
+</html>

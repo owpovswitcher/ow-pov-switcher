@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0e11" />
+  <title>試合カタログ | OW POV Switcher</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="./index.html" aria-label="OW POV Switcher プレイヤー">
+          <span class="brand-mark" aria-hidden="true">◒</span>
+          <span>
+            <span class="brand-kicker">OW REPLAY LAB</span>
+            <span class="brand-name">OW POV SWITCHER</span>
+          </span>
+        </a>
+        <div class="topbar-tools">
+          <nav class="primary-nav" aria-label="メインナビゲーション">
+            <a href="./index.html">プレイヤー</a>
+            <a class="is-active" href="./catalog.html" aria-current="page">カタログ</a>
+            <a href="./usage.html">ご利用にあたって</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="page-hero">
+          <div>
+            <h1>試合カタログ</h1>
+            <p class="hero-text">
+              登録された試合を検索できます。試合を選択すると、視点プレイヤーを開きます。
+            </p>
+          </div>
+        </section>
+
+        <section class="catalog-toolbar panel" aria-label="カタログ操作">
+          <div class="catalog-toolbar-heading">
+            <div>
+              <h2 id="catalogCount">読み込み中</h2>
+            </div>
+          </div>
+          <div class="catalog-filters">
+            <label class="catalog-search">
+              <span class="field-label">試合を検索</span>
+              <input id="catalogSearch" class="text-input" type="search" placeholder="タイトル、マップ、リプレイコード" autocomplete="off" />
+            </label>
+          </div>
+          <p id="catalogStatusMessage" class="data-status" aria-live="polite"></p>
+        </section>
+
+        <section class="catalog-section" aria-label="試合一覧">
+          <div id="catalogGrid" class="catalog-grid" aria-live="polite"></div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>OW POV SWITCHER</span>
+        <nav class="footer-links" aria-label="サイト情報">
+          <a href="./index.html">プレイヤー</a>
+          <a href="./catalog.html" aria-current="page">カタログ</a>
+          <a href="./usage.html">ご利用にあたって</a>
+          <a href="https://x.com/OWPOVSwitcher" target="_blank" rel="noreferrer noopener">X @OWPOVSwitcher</a>
+        </nav>
+      </footer>
+    </div>
+
+    <script src="./map-data.js" defer></script>
+    <script src="./patch-data.js" defer></script>
+    <script src="./catalog-data.js" defer></script>
+    <script src="./catalog.js" defer></script>
+  </body>
+</html>
