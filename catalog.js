@@ -4,18 +4,25 @@
   const state = {
     matches: [],
     query: "",
+    mapKey: "",
   };
 
+  const NO_MAP_FILTER = "__no-map__";
   const elements = {};
 
   document.addEventListener("DOMContentLoaded", init);
 
   async function init() {
-    ["catalogCount", "catalogSearch", "catalogStatusMessage", "catalogGrid"]
+    ["catalogCount", "catalogSearch", "catalogMapFilter", "catalogStatusMessage", "catalogGrid"]
       .forEach((id) => { elements[id] = document.getElementById(id); });
 
     elements.catalogSearch.addEventListener("input", () => {
       state.query = elements.catalogSearch.value.trim().toLowerCase();
+      render();
+    });
+
+    elements.catalogMapFilter.addEventListener("change", () => {
+      state.mapKey = elements.catalogMapFilter.value;
       render();
     });
 
@@ -33,6 +40,7 @@
     try {
       const result = await MatchCatalog.loadCatalog();
       state.matches = result.matches;
+      populateMapFilter();
       if (result.errors.length) {
         setStatus(`一部のデータを読み込めませんでした。${result.errors.length}件`, true);
       } else {
@@ -62,11 +70,12 @@
     elements.catalogCount.textContent = `${visibleMatches.length}件の試合`;
 
     if (!visibleMatches.length) {
+      const hasFilter = Boolean(state.query || state.mapKey);
       elements.catalogGrid.innerHTML = `
         <div class="catalog-empty panel">
           <span class="empty-glyph" aria-hidden="true">＋</span>
-          <strong>${state.matches.length ? "条件に合う試合がありません" : "まだ試合が登録されていません"}</strong>
-          <span>${state.matches.length ? "検索語を変更してください" : "カタログJSONに試合を登録すると、ここに表示されます"}</span>
+          <strong>${state.matches.length && hasFilter ? "条件に合う試合がありません" : "まだ試合が登録されていません"}</strong>
+          <span>${state.matches.length && hasFilter ? "検索条件を変更してください" : "カタログに試合を登録すると、ここに表示されます"}</span>
         </div>
       `;
       return;
@@ -76,6 +85,7 @@
   }
 
   function matchesFilter(match) {
+    if (state.mapKey && getMapFilterKey(match) !== state.mapKey) return false;
     if (!state.query) return true;
 
     const map = getMapDisplay(match);
@@ -84,6 +94,38 @@
       .join(" ")
       .toLowerCase();
     return haystack.includes(state.query);
+  }
+
+  function populateMapFilter() {
+    const mapOptions = new Map();
+    state.matches.forEach((match) => {
+      const key = getMapFilterKey(match);
+      if (!mapOptions.has(key)) mapOptions.set(key, getMapDisplay(match).name);
+    });
+
+    const sortedOptions = [...mapOptions.entries()].sort((first, second) => (
+      first[1].localeCompare(second[1], "ja") || first[0].localeCompare(second[0])
+    ));
+
+    elements.catalogMapFilter.innerHTML = [
+      '<option value="">すべてのマップ</option>',
+      ...sortedOptions.map(([key, name]) => (
+        `<option value="${MatchCatalog.escapeHtml(key)}">${MatchCatalog.escapeHtml(name)}</option>`
+      )),
+    ].join("");
+
+    if (mapOptions.has(state.mapKey)) {
+      elements.catalogMapFilter.value = state.mapKey;
+    } else {
+      state.mapKey = "";
+      elements.catalogMapFilter.value = "";
+    }
+    elements.catalogMapFilter.disabled = sortedOptions.length === 0;
+  }
+
+  function getMapFilterKey(match) {
+    const mapKey = String(match.mapKey || "").trim().toLowerCase();
+    return mapKey || NO_MAP_FILTER;
   }
 
   function renderMatchCard(match) {

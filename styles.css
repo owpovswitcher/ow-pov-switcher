@@ -913,7 +913,7 @@ input[type="range"] {
 
 .catalog-filters {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(180px, 0.8fr);
   gap: 10px;
   margin-top: 14px;
 }
@@ -923,6 +923,14 @@ input[type="range"] {
 }
 
 .catalog-search .text-input {
+  height: 40px;
+}
+
+.catalog-filter {
+  display: block;
+}
+
+.catalog-filter .text-input {
   height: 40px;
 }
 

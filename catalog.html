@@ -45,7 +45,13 @@
           <div class="catalog-filters">
             <label class="catalog-search">
               <span class="field-label">試合を検索</span>
-              <input id="catalogSearch" class="text-input" type="search" placeholder="タイトル、マップ、リプレイコード" autocomplete="off" />
+              <input id="catalogSearch" class="text-input" type="search" placeholder="タイトル、リプレイコード" autocomplete="off" />
+            </label>
+            <label class="catalog-filter">
+              <span class="field-label">マップで絞り込む</span>
+              <select id="catalogMapFilter" class="text-input">
+                <option value="">すべてのマップ</option>
+              </select>
             </label>
           </div>
           <p id="catalogStatusMessage" class="data-status" aria-live="polite"></p>
