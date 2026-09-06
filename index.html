@@ -49,6 +49,11 @@
             </div>
             <div id="povList" class="pov-list"></div>
 
+            <div class="match-actions" aria-label="試合データの読み込み">
+              <button id="importMatch" class="button button-outline" type="button">試合JSONを読み込む</button>
+              <input id="matchFile" type="file" accept="application/json,.json" hidden />
+            </div>
+
             <div class="data-actions" aria-label="個人メモのバックアップ">
               <button id="exportConfig" class="button button-outline" type="button">メモをバックアップ</button>
               <button id="importConfig" class="button button-outline" type="button">メモを復元</button>

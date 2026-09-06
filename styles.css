@@ -465,6 +465,15 @@ h2 {
   margin-top: 10px;
 }
 
+.match-actions {
+  margin-top: 14px;
+}
+
+.match-actions .button {
+  width: 100%;
+  justify-content: center;
+}
+
 .data-actions .button {
   justify-content: center;
   min-width: 0;

@@ -6,6 +6,8 @@
   const NOTES_KEY_PREFIX = "ow-replay-viewer:notes:";
   const EXPORT_FORMAT = "ow-replay-viewer";
   const EXPORT_VERSION = 3;
+  const MATCH_FORMAT = "ow-replay-viewer-match";
+  const MATCH_VERSION = 1;
   const MAX_OFFSET_SECONDS = 7200;
   const LOCAL_FILE_MESSAGE = "このプレイヤーはfile://では動作しません。HTTPサーバー経由で http://localhost:4173/ を開いてください。";
 
@@ -124,6 +126,8 @@
     const ids = [
       "matchPageTitle",
       "povList",
+      "importMatch",
+      "matchFile",
       "exportConfig",
       "importConfig",
       "importFile",
@@ -171,6 +175,8 @@
     elements.noteComposer.addEventListener("submit", saveNote);
     elements.cancelNote.addEventListener("click", closeNoteComposer);
     elements.noteList.addEventListener("click", handleNoteListClick);
+    elements.importMatch.addEventListener("click", () => elements.matchFile.click());
+    elements.matchFile.addEventListener("change", handleImportMatchFile);
     elements.exportConfig.addEventListener("click", downloadConfig);
     elements.importConfig.addEventListener("click", () => elements.importFile.click());
     elements.importFile.addEventListener("change", handleImportFile);
@@ -759,28 +765,95 @@
       );
       if (!confirmed) return;
 
-      state.matchId = imported.matchId;
-      state.matchTitle = imported.title;
-      state.mapKey = imported.mapKey;
-      state.patchVersion = imported.patchVersion;
-      state.sourceReplayCode = imported.sourceReplayCode;
-      state.videoDuration = 0;
-      state.perspectives = imported.perspectives;
-      state.notes = imported.notes;
-      state.activeIndex = 0;
-      updateMatchPageTitle();
-      renderPerspectiveSelector();
-      renderNotes();
-      updateDurationUI();
-      updateActiveUI();
-      persistConfig();
-      initializePlayer();
+      applyImportedMatch(imported, imported.notes);
       setDataStatus(`メモを復元しました。${state.notes.length}件`, false);
     } catch (error) {
       setDataStatus(error.message || "メモを復元できませんでした。", true);
     } finally {
       event.target.value = "";
     }
+  }
+
+  async function handleImportMatchFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const payload = JSON.parse(await file.text());
+      const imported = normalizeMatchFilePayload(payload);
+      const confirmed = window.confirm(
+        `「${imported.title}」の試合JSONを読み込みますか？現在表示している試合を切り替えます。`,
+      );
+      if (!confirmed) return;
+
+      applyImportedMatch(imported);
+      setDataStatus(`試合JSONを読み込みました。${imported.title}`, false);
+    } catch (error) {
+      setDataStatus(error.message || "試合JSONを読み込めませんでした。", true);
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function applyImportedMatch(imported, importedNotes) {
+    state.matchId = imported.matchId;
+    state.matchTitle = imported.title;
+    state.mapKey = imported.mapKey;
+    state.patchVersion = imported.patchVersion;
+    state.sourceReplayCode = imported.sourceReplayCode;
+    state.videoDuration = 0;
+    state.perspectives = imported.perspectives;
+    state.notes = importedNotes === undefined
+      ? readNotesForMatch(state.matchId, [])
+      : importedNotes;
+    state.activeIndex = 0;
+    state.requestedMatchId = "";
+    state.matchLoadError = "";
+    clearMatchQuery();
+    updateMatchPageTitle();
+    renderPerspectiveSelector();
+    renderNotes();
+    updateDurationUI();
+    updateActiveUI();
+    persistConfig();
+    initializePlayer();
+  }
+
+  function normalizeMatchFilePayload(payload) {
+    if (!payload || payload.format !== MATCH_FORMAT) {
+      throw new Error("カタログ生成ツールで作成した試合JSONではありません。");
+    }
+    if (Number(payload.version) !== MATCH_VERSION) {
+      throw new Error(`対応していない試合JSONバージョンです: ${payload.version}`);
+    }
+    if (!window.MatchCatalog?.normalizeMatch) {
+      throw new Error("試合JSONの定義を読み込めませんでした。ページを再読み込みしてください。");
+    }
+
+    const match = window.MatchCatalog.normalizeMatch(payload.match);
+    return {
+      matchId: match.id,
+      title: match.title,
+      mapKey: normalizeMapKey(match.mapKey),
+      patchVersion: normalizePatchVersion(match.patchVersion),
+      sourceReplayCode: normalizeSourceReplayCode(match.sourceReplayCode),
+      perspectives: match.perspectives.map((perspective, index) => ({
+        ...defaultPerspectives[index],
+        key: perspective.key || defaultPerspectives[index].key,
+        name: perspective.name || defaultPerspectives[index].name,
+        role: perspective.role || defaultPerspectives[index].role,
+        team: perspective.team || defaultPerspectives[index].team,
+        videoId: normalizeVideoId(perspective.youtubeVideoId || perspective.videoId || perspective.url),
+        offset: Number(perspective.offsetSeconds ?? perspective.offset ?? 0),
+      })),
+    };
+  }
+
+  function clearMatchQuery() {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("matchId")) return;
+    url.searchParams.delete("matchId");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   function normalizeImportPayload(payload) {
