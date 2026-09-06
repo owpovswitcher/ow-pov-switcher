@@ -42,7 +42,7 @@
     ready: 0,
     total: 1,
     isPlaying: false,
-    pauseAfterLoad: false,
+    pendingPausedLoad: null,
     volume: 100,
     noteDraftTimeMs: null,
     rafId: null,
@@ -243,10 +243,10 @@
     destroyPlayer();
     state.activeIndex = Math.min(state.activeIndex, state.perspectives.length - 1);
     state.isPlaying = false;
-    state.pauseAfterLoad = false;
     state.ready = 0;
     state.total = 1;
     state.videoDuration = 0;
+    state.pendingPausedLoad = null;
     const perspective = state.perspectives[state.activeIndex];
 
     updateActiveUI();
@@ -332,8 +332,8 @@
     syncDurationFromPlayer(event.target);
 
     if (event.data === YT.PlayerState.PLAYING) {
-      if (state.pauseAfterLoad) {
-        state.pauseAfterLoad = false;
+      if (state.pendingPausedLoad) {
+        state.pendingPausedLoad.hasStarted = true;
         state.isPlaying = false;
         if (typeof event.target.pauseVideo === "function") event.target.pauseVideo();
         updatePlayButton();
@@ -345,6 +345,11 @@
       updatePlayButton();
       updateNoteControls();
     } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+      if (state.pendingPausedLoad?.hasStarted) {
+        completePendingPausedLoad(event.target);
+        return;
+      }
+
       state.isPlaying = false;
       updatePlayButton();
       updateNoteControls();
@@ -354,7 +359,8 @@
   function onPlayerError(generation, event) {
     if (generation !== state.playerGeneration) return;
 
-    state.pauseAfterLoad = false;
+    state.pendingPausedLoad = null;
+    applyVolumeToPlayer(event.target || state.player);
     const code = event && event.data !== undefined ? event.data : "unknown";
     showStageMessage("動画を再生できません", `YouTube error ${code} / 動画IDまたは埋め込み設定を確認してください`);
   }
@@ -367,13 +373,11 @@
     const wasPlaying = state.isPlaying;
 
     state.activeIndex = index;
-    state.pauseAfterLoad = !wasPlaying;
-
     updateActiveUI();
     updateTimeline(matchTime);
 
     if (!targetPerspective.videoId) {
-      state.pauseAfterLoad = false;
+      state.pendingPausedLoad = null;
       state.isPlaying = false;
       state.playerGeneration += 1;
       destroyPlayer();
@@ -397,9 +401,7 @@
     const player = state.player;
     if (typeof player.loadVideoById !== "function") return;
 
-    const targetVideoTime = getTargetVideoTime(matchTime, targetPerspective);
-
-    player.loadVideoById({ videoId: targetPerspective.videoId, startSeconds: targetVideoTime });
+    loadPerspectiveVideo(player, targetPerspective, matchTime, wasPlaying);
   }
 
   function togglePlayback() {
@@ -415,7 +417,8 @@
     }
 
     if (typeof player.playVideo === "function") {
-      state.pauseAfterLoad = false;
+      state.pendingPausedLoad = null;
+      applyVolumeToPlayer(player);
       player.playVideo();
       state.isPlaying = true;
       updatePlayButton();
@@ -458,13 +461,46 @@
     if (!player || typeof player.loadVideoById !== "function") return;
 
     const matchTime = getMatchTime();
-    const targetTime = getTargetVideoTime(matchTime, perspective, player);
     const wasPlaying = state.isPlaying;
 
-    state.pauseAfterLoad = !wasPlaying;
-    player.loadVideoById({ videoId: perspective.videoId, startSeconds: targetTime });
+    loadPerspectiveVideo(player, perspective, matchTime, wasPlaying);
 
     updateTimeline(matchTime);
+  }
+
+  function loadPerspectiveVideo(player, perspective, matchTime, shouldPlay) {
+    const targetVideoTime = getTargetVideoTime(matchTime, perspective, player);
+
+    // loadVideoById starts playback; keep a paused switch muted until the
+    // first pause event so the browser never plays the transition audibly.
+    state.pendingPausedLoad = shouldPlay
+      ? null
+      : {
+        matchTime,
+        videoTime: targetVideoTime,
+        hasStarted: false,
+      };
+
+    if (state.pendingPausedLoad) {
+      player.mute?.();
+    } else {
+      applyVolumeToPlayer(player);
+    }
+
+    player.loadVideoById({ videoId: perspective.videoId, startSeconds: targetVideoTime });
+  }
+
+  function completePendingPausedLoad(player) {
+    const pending = state.pendingPausedLoad;
+    if (!pending) return;
+
+    state.pendingPausedLoad = null;
+    if (typeof player.seekTo === "function") player.seekTo(pending.videoTime, true);
+    state.isPlaying = false;
+    applyVolumeToPlayer(player);
+    updateTimeline(pending.matchTime);
+    updatePlayButton();
+    updateNoteControls();
   }
 
   function getMatchTime() {
@@ -578,6 +614,11 @@
   function applyVolumeToPlayer(player) {
     if (!player) return;
 
+    if (state.pendingPausedLoad) {
+      if (typeof player.mute === "function") player.mute();
+      return;
+    }
+
     if (state.volume === 0 && typeof player.mute === "function") {
       player.mute();
       return;
@@ -593,7 +634,13 @@
   }
 
   function updateNoteControls() {
-    const canAddNote = Boolean(state.player && state.ready === state.total && !state.isPlaying && elements.noteComposer.hidden);
+    const canAddNote = Boolean(
+      state.player
+      && state.ready === state.total
+      && !state.isPlaying
+      && !state.pendingPausedLoad
+      && elements.noteComposer.hidden,
+    );
     elements.addNote.disabled = !canAddNote;
     elements.addNote.title = state.isPlaying ? "一時停止してからメモを追加" : "現在の再生位置にメモ";
   }
