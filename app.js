@@ -1,7 +1,8 @@
 (() => {
   "use strict";
 
-  const DEMO_VIDEO_ID = "M7lc1UVf-VE";
+  const LEGACY_DEMO_TITLE = "Ranked test match / Midtown";
+  const LEGACY_DEMO_VIDEO_ID = "M7lc1UVf-VE";
   const CONFIG_KEY = "ow-pov-switchboard-config-v1";
   const NOTES_KEY_PREFIX = "ow-replay-viewer:notes:";
   const EXPORT_FORMAT = "ow-replay-viewer";
@@ -12,24 +13,25 @@
   const LOCAL_FILE_MESSAGE = "このプレイヤーはfile://では動作しません。HTTPサーバー経由で http://localhost:4173/ を開いてください。";
 
   const defaultPerspectives = [
-    { key: "map", name: "Overview", role: "MAP", team: "WORLD", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p01", name: "Player 01", role: "TANK", team: "ALLY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p02", name: "Player 02", role: "DPS", team: "ALLY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p03", name: "Player 03", role: "DPS", team: "ALLY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p04", name: "Player 04", role: "SUPPORT", team: "ALLY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p05", name: "Player 05", role: "SUPPORT", team: "ALLY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p06", name: "Player 06", role: "TANK", team: "ENEMY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p07", name: "Player 07", role: "DPS", team: "ENEMY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p08", name: "Player 08", role: "DPS", team: "ENEMY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p09", name: "Player 09", role: "SUPPORT", team: "ENEMY", videoId: DEMO_VIDEO_ID, offset: 0 },
-    { key: "p10", name: "Player 10", role: "SUPPORT", team: "ENEMY", videoId: DEMO_VIDEO_ID, offset: 0 },
+    { key: "map", name: "Overview", role: "MAP", team: "WORLD", videoId: "", offset: 0 },
+    { key: "p01", name: "Player 01", role: "TANK", team: "ALLY", videoId: "", offset: 0 },
+    { key: "p02", name: "Player 02", role: "DPS", team: "ALLY", videoId: "", offset: 0 },
+    { key: "p03", name: "Player 03", role: "DPS", team: "ALLY", videoId: "", offset: 0 },
+    { key: "p04", name: "Player 04", role: "SUPPORT", team: "ALLY", videoId: "", offset: 0 },
+    { key: "p05", name: "Player 05", role: "SUPPORT", team: "ALLY", videoId: "", offset: 0 },
+    { key: "p06", name: "Player 06", role: "TANK", team: "ENEMY", videoId: "", offset: 0 },
+    { key: "p07", name: "Player 07", role: "DPS", team: "ENEMY", videoId: "", offset: 0 },
+    { key: "p08", name: "Player 08", role: "DPS", team: "ENEMY", videoId: "", offset: 0 },
+    { key: "p09", name: "Player 09", role: "SUPPORT", team: "ENEMY", videoId: "", offset: 0 },
+    { key: "p10", name: "Player 10", role: "SUPPORT", team: "ENEMY", videoId: "", offset: 0 },
   ];
 
   const state = {
     matchId: createMatchId(),
     requestedMatchId: "",
     matchLoadError: "",
-    matchTitle: "Ranked test match / Midtown",
+    hasActiveMatch: false,
+    matchTitle: "試合未選択",
     mapKey: "",
     patchVersion: "",
     sourceReplayCode: "",
@@ -105,6 +107,7 @@
 
   function applyCatalogMatch(match) {
     state.matchId = match.id;
+    state.hasActiveMatch = true;
     state.matchTitle = match.title;
     state.mapKey = normalizeMapKey(match.mapKey);
     state.patchVersion = normalizePatchVersion(match.patchVersion);
@@ -254,6 +257,11 @@
     updatePlayButton();
     updateNoteControls();
 
+    if (!state.hasActiveMatch) {
+      showStageMessage("試合を選択してください", "カタログから試合を開くか、試合JSONを読み込んでください");
+      return;
+    }
+
     if (!perspective || !perspective.videoId) {
       showStageMessage("この視点の動画は未登録です", "カタログに動画が登録されていません");
       return;
@@ -362,11 +370,28 @@
     state.pendingPausedLoad = null;
     applyVolumeToPlayer(event.target || state.player);
     const code = event && event.data !== undefined ? event.data : "unknown";
-    showStageMessage("動画を再生できません", `YouTube error ${code} / 動画IDまたは埋め込み設定を確認してください`);
+    showStageMessage("動画を再生できません", `${getYouTubeErrorMessage(code)}（エラーコード: ${code}）`);
+  }
+
+  function getYouTubeErrorMessage(code) {
+    const messages = {
+      2: "動画IDの形式が正しくありません。登録したYouTube URLを確認してください。",
+      5: "この動画は現在のブラウザでは再生できません。",
+      100: "動画が削除されたか、非公開になっています。YouTube側の公開状態を確認してください。",
+      101: "この動画は埋め込み再生が許可されていません。動画の公開設定を確認してください。",
+      150: "この動画は埋め込み再生が許可されていません。動画の公開設定を確認してください。",
+      153: "YouTubeが再生元を確認できませんでした。HTTPSまたはHTTPのサイトから開き直してください。",
+    };
+
+    return messages[Number(code)] || "一時的なエラーが発生しました。少し待ってから再読み込みしてください。";
   }
 
   function selectPerspective(index) {
     if (index < 0 || index >= state.perspectives.length || index === state.activeIndex) return;
+    if (!state.hasActiveMatch) {
+      showStageMessage("試合を選択してください", "カタログから試合を開くか、試合JSONを読み込んでください");
+      return;
+    }
 
     const matchTime = getMatchTime();
     const targetPerspective = state.perspectives[index];
@@ -585,6 +610,14 @@
   function updateActiveUI() {
     const perspective = state.perspectives[state.activeIndex] || state.perspectives[0];
     if (!perspective) return;
+
+    if (!state.hasActiveMatch) {
+      elements.viewerTitle.textContent = "視点未選択";
+      elements.activeName.textContent = "—";
+      elements.activeMeta.textContent = "—";
+      updatePerspectiveRows();
+      return;
+    }
 
     elements.viewerTitle.textContent = `${perspective.name} / ${perspective.role}`;
     elements.activeName.textContent = perspective.name;
@@ -844,6 +877,7 @@
 
   function applyImportedMatch(imported, importedNotes) {
     state.matchId = imported.matchId;
+    state.hasActiveMatch = true;
     state.matchTitle = imported.title;
     state.mapKey = imported.mapKey;
     state.patchVersion = imported.patchVersion;
@@ -1040,9 +1074,14 @@
       const raw = localStorage.getItem(CONFIG_KEY);
       if (!raw) return;
       const saved = JSON.parse(raw);
+      if (isLegacyDemoConfig(saved)) {
+        localStorage.removeItem(CONFIG_KEY);
+        return;
+      }
       if (saved && Array.isArray(saved.perspectives) && saved.perspectives.length === 11) {
         const savedMatchId = normalizeMatchId(saved.matchId);
         if (!preserveMatch) {
+          state.hasActiveMatch = true;
           state.matchId = savedMatchId || state.matchId;
           state.matchTitle = String(saved.matchTitle || state.matchTitle);
           state.mapKey = normalizeMapKey(saved.mapKey);
@@ -1061,6 +1100,16 @@
     } catch (_error) {
       state.perspectives = clone(defaultPerspectives);
     }
+  }
+
+  function isLegacyDemoConfig(saved) {
+    if (saved?.matchTitle !== LEGACY_DEMO_TITLE || !Array.isArray(saved.perspectives) || saved.perspectives.length !== 11) {
+      return false;
+    }
+
+    return saved.perspectives.every((perspective) => (
+      normalizeVideoId(perspective?.videoId) === LEGACY_DEMO_VIDEO_ID
+    ));
   }
 
   function normalizeVideoId(value) {
